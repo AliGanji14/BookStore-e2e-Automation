@@ -1,0 +1,32 @@
+{
+  "name": "bookstore-e2e-automation",
+  "version": "1.0.0",
+  "description": "End-to-end automation suite for the BookCart online book store, built with Playwright and JavaScript.",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test tests/smoke",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:chromium": "playwright test --project=chromium",
+    "report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AliGanji14/BookStore-e2e-Automation.git"
+  },
+  "keywords": [
+    "playwright",
+    "e2e",
+    "automation",
+    "testing"
+  ],
+  "type": "commonjs",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AliGanji14/BookStore-e2e-Automation/issues"
+  },
+  "homepage": "https://github.com/AliGanji14/BookStore-e2e-Automation#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}
