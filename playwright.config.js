@@ -22,8 +22,10 @@ module.exports = defineConfig({
   // Run tests in the same file in parallel.
   fullyParallel: true,
 
-  // Retry only on CI — locally we want to see real failures fast.
-  retries: process.env.CI ? 2 : 0,
+  // The public demo server drops connections intermittently (observed:
+  // ERR_CONNECTION_CLOSED, one-off 401 right after a 200 registration), so one
+  // local retry keeps infra noise out of real failures. CI gets more.
+  retries: process.env.CI ? 2 : 1,
 
   // Keep the terminal readable; Playwright picks a good default per machine.
   workers: process.env.CI ? 1 : undefined,
