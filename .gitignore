@@ -181,3 +181,6 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+
+# Local cached test credentials (created by utils/api-helpers.js)
+test-data/.local-user.json
