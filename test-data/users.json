@@ -1,0 +1,14 @@
+{
+  "primary": {
+    "firstName": "QA",
+    "lastName": "Automation",
+    "gender": "Male",
+    "comment": "Password is NOT stored here — it comes from process.env.TEST_USER_PASSWORD (.env). Username is generated dynamically per run."
+  },
+  "secondary": {
+    "firstName": "QE",
+    "lastName": "Second",
+    "gender": "Female",
+    "comment": "Used when two accounts must exist at once (e.g. cart-merge edge checks)."
+  }
+}

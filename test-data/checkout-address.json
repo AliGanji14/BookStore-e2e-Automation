@@ -1,0 +1,16 @@
+{
+  "comment": "Shipping-address fixtures for Checkout (CO-03/CO-04). The checkout form has NO payment fields — only a shipping address (verified in app source).",
+  "valid": {
+    "name": "QA Automation",
+    "addressLine1": "Test Street 1",
+    "addressLine2": "Unit 2",
+    "pincode": "411014",
+    "state": "Maharashtra"
+  },
+  "invalidPincodes": {
+    "comment": "Rule from app source: 'Pincode must have 6 digits only and cannot start with 0'",
+    "startsWithZero": "011014",
+    "tooShort": "12345",
+    "tooLong": "1234567890"
+  }
+}

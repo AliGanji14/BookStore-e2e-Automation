@@ -1,12 +1,15 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
+require('dotenv').config({ path: process.env.ENV_FILE || '.env' });
 
 /**
  * Playwright configuration for the Online Book Store E2E suite.
  * Read more: https://playwright.dev/docs/test-configuration
  */
 module.exports = defineConfig({
-  // Only pick up test files inside the tests folder.
+  // Where the application under test lives — every page.goto('/') uses this.
+  // Overridable per environment: ENV_FILE=.env.staging npx playwright test
+  baseURL: process.env.BASE_URL || 'https://bookcart.azurewebsites.net',
   testDir: './tests',
 
   // Fail the run if a leftover test.only sneaks into the code.
