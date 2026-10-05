@@ -97,4 +97,37 @@ async function loginStatus(baseURL, user) {
   return requestStatus('POST', `${baseURL}/api/login`, { username: user.username, password: user.password });
 }
 
-module.exports = { ensureUser, requestStatus };
+/**
+ * Reads the book catalog. Returns the list, or null when the API is down or
+ * empty (the demo's catalog has known outages — suites use this as a gate).
+ * @param {string} baseURL
+ * @returns {Promise<Array<{ bookId: number, title: string, author: string, category: string, price: number }> | null>}
+ */
+async function getBooks(baseURL) {
+  const out = await curl(['-s', '-m', '30', `${baseURL}/api/Book`]);
+  if (!out) return null;
+  try {
+    const books = JSON.parse(out);
+    return Array.isArray(books) && books.length > 0 ? books : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads the category list, or null when the API fails.
+ * @param {string} baseURL
+ * @returns {Promise<Array<{ categoryId: number, categoryName: string }> | null>}
+ */
+async function getCategories(baseURL) {
+  const out = await curl(['-s', '-m', '30', `${baseURL}/api/Book/GetCategoriesList`]);
+  if (!out) return null;
+  try {
+    const categories = JSON.parse(out);
+    return Array.isArray(categories) && categories.length > 0 ? categories : null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { ensureUser, requestStatus, getBooks, getCategories };
