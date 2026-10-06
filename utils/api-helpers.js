@@ -65,14 +65,19 @@ async function requestStatus(method, url, body) {
  * @returns {Promise<{ username: string, password: string, firstName: string, lastName: string, gender: string }>}
  */
 async function ensureUser(baseURL, userFactory) {
-  // 1. Reuse the cached account when it still works.
-  if (fs.existsSync(CACHE_FILE)) {
-    try {
-      const cached = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
-      if ((await loginStatus(baseURL, cached)) === 200) return cached;
-    } catch {
-      // unreadable cache — create a fresh account below
+  // 1. Reuse the cached account when it still works. The verification login
+  //    is retried — the demo's edge drops requests even when the account is
+  //    perfectly fine, and one flaky 401 must not discard a good account.
+  for (let check = 0; check < 3; check++) {
+    if (fs.existsSync(CACHE_FILE)) {
+      try {
+        const cached = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+        if ((await loginStatus(baseURL, cached)) === 200) return cached;
+      } catch {
+        // unreadable cache — create a fresh account below
+      }
     }
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
   }
 
   // 2. Register a fresh account; only trust a successful login round-trip.
