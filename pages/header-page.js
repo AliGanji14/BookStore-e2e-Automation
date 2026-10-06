@@ -16,6 +16,24 @@ class HeaderPage {
 
     // Search box in the header.
     this.searchInput = page.getByPlaceholder('Search books or authors');
+
+    // Cart icon button (identified by its shopping_cart icon, no accessible name).
+    this.cartIcon = this.toolbar.locator('button:has(mat-icon:text-is("shopping_cart"))');
+  }
+
+  /**
+   * The badge number lives inside the cart icon's text ("shopping_cart2").
+   * The badge value is the SUM of item quantities (cart.selectors.ts).
+   */
+  async cartBadgeCount() {
+    const text = (await this.cartIcon.textContent()) ?? '';
+    const match = text.match(/(\d+)\s*$/);
+    return match ? Number(match[1]) : 0;
+  }
+
+  async openCart() {
+    await this.cartIcon.click();
+    await expect(this.page).toHaveURL(/\/shopping-cart$/);
   }
 
   /**
