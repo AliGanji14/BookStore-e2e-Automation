@@ -55,6 +55,29 @@ async function requestStatus(method, url, body) {
 }
 
 /**
+ * Performs an HTTP request via curl and returns { status, body }.
+ * curl is used because the demo's edge unreliably drops Node-side writes.
+ * @param {'GET' | 'POST' | 'PUT' | 'DELETE'} method
+ * @param {string} url
+ * @param {object} [body]
+ * @param {string} [authToken] Bearer token to send
+ * @returns {Promise<{ status: number | null, body: string | null }>}
+ */
+async function requestJson(method, url, body, authToken) {
+  const args = ['-s', '-m', '30', '-X', method, '-w', '\n%{http_code}'];
+  if (body) args.push('-H', 'Content-Type: application/json', '-d', JSON.stringify(body));
+  if (authToken) args.push('-H', `Authorization: Bearer ${authToken}`);
+  args.push(url);
+  const out = await curl(args);
+  if (out === null) return { status: null, body: null };
+  const separator = out.lastIndexOf('\n');
+  return {
+    status: Number(out.slice(separator + 1)),
+    body: separator === -1 ? '' : out.slice(0, separator),
+  };
+}
+
+/**
  * Ensures a working test account exists and returns its credentials.
  * - Reuses the cached account when it still logs in.
  * - Otherwise registers a fresh one, retrying across the demo's outage
@@ -135,4 +158,4 @@ async function getCategories(baseURL) {
   }
 }
 
-module.exports = { ensureUser, requestStatus, getBooks, getCategories };
+module.exports = { ensureUser, requestStatus, requestJson, getBooks, getCategories };
