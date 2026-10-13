@@ -22,6 +22,12 @@ class CatalogPage {
     return this.page.locator('app-book-card').filter({ hasText: title });
   }
 
+  /** Opens the home page and clicks "Add to Cart" on the card for the title. */
+  async addToCart(title) {
+    await this.page.goto('/');
+    await this.bookCard(title).getByRole('button', { name: 'Add to Cart' }).click();
+  }
+
   /** The card's title link (the card also contains a cover-image link). */
   bookCardTitleLink(title) {
     return this.bookCard(title).getByRole('link').filter({ hasText: title });

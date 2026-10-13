@@ -146,21 +146,6 @@ test.describe('Negative & Edge — catalog data', () => {
     );
   });
 
-  async function loginAs(page) {
-    const login = new LoginPage(page);
-    await login.goto();
-    await login.login(account.username, account.password);
-  }
-
-  async function resetCart(page) {
-    const cart = new ShoppingCartPage(page);
-    const header = new HeaderPage(page);
-    await header.openCart();
-    if (await cart.clearCartButton.isVisible().catch(() => false)) {
-      await cart.clearCartButton.click();
-      await expect(cart.emptyMessage).toBeVisible();
-    }
-  }
 
   test('EDGE-SRCH-05: search results are case-insensitive (upper vs lower query)', async ({ page }) => {
     const header = new HeaderPage(page);

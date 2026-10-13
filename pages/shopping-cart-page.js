@@ -1,4 +1,7 @@
 // @ts-check
+const { expect } = require('@playwright/test');
+const { escapeRegExp } = require('../utils/regex');
+
 /**
  * Page Object for /shopping-cart.
  * Selectors follow docs/selector-strategy.md §6: rows are anchored by book
@@ -20,9 +23,18 @@ class ShoppingCartPage {
     this.cartTotalValue = page.locator('td:has-text("Cart Total:") + td strong');
   }
 
+  /** Opens the cart and clears it if it has items, so a test starts empty. */
+  async openAndClearIfNotEmpty(header) {
+    await header.openCart();
+    if (await this.clearCartButton.isVisible().catch(() => false)) {
+      await this.clearCartButton.click();
+      await expect(this.emptyMessage).toBeVisible();
+    }
+  }
+
   /** A cart table row, anchored by the book title. */
   row(title) {
-    return this.page.getByRole('row', { name: new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+    return this.page.getByRole('row', { name: new RegExp(escapeRegExp(title)) });
   }
 
   /** Cell of a row by column name — keeps positional access in one place. */

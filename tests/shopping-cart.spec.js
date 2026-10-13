@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { HeaderPage } = require('../pages/header-page');
+const { CatalogPage } = require('../pages/catalog-page');
 const { ShoppingCartPage } = require('../pages/shopping-cart-page');
 const { getBooks } = require('../utils/api-helpers');
 const { formatInr } = require('../utils/format');
@@ -44,11 +45,10 @@ test.describe('Shopping Cart — management', () => {
 
   test('CART-01: adding one book puts its name and price in the cart', async ({ page }) => {
     const header = new HeaderPage(page);
-    const catalog = new CatalogPageForCart(page);
+    const catalog = new CatalogPage(page);
     const cart = new ShoppingCartPage(page);
     const book = books[0];
 
-    await page.goto('/');
     await catalog.addToCart(book.title);
 
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
@@ -61,11 +61,10 @@ test.describe('Shopping Cart — management', () => {
 
   test('CART-02: adding multiple books lists every book', async ({ page }) => {
     const header = new HeaderPage(page);
-    const catalog = new CatalogPageForCart(page);
+    const catalog = new CatalogPage(page);
     const cart = new ShoppingCartPage(page);
     const [first, second] = books;
 
-    await page.goto('/');
     await catalog.addToCart(first.title);
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
     await catalog.addToCart(second.title);
@@ -78,11 +77,10 @@ test.describe('Shopping Cart — management', () => {
 
   test('CART-03: the badge count equals the sum of item quantities', async ({ page }) => {
     const header = new HeaderPage(page);
-    const catalog = new CatalogPageForCart(page);
+    const catalog = new CatalogPage(page);
     const cart = new ShoppingCartPage(page);
     const book = books[0];
 
-    await page.goto('/');
     await catalog.addToCart(book.title);
     await catalog.addToCart(book.title);
 
@@ -94,11 +92,10 @@ test.describe('Shopping Cart — management', () => {
 
   test('CART-04: increasing quantity updates totals reliably', async ({ page }) => {
     const header = new HeaderPage(page);
-    const catalog = new CatalogPageForCart(page);
+    const catalog = new CatalogPage(page);
     const cart = new ShoppingCartPage(page);
     const book = books[0];
 
-    await page.goto('/');
     await catalog.addToCart(book.title);
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
 
@@ -114,11 +111,10 @@ test.describe('Shopping Cart — management', () => {
 
   test('CART-05: the cart total is the sum of price x quantity over all rows', async ({ page }) => {
     const header = new HeaderPage(page);
-    const catalog = new CatalogPageForCart(page);
+    const catalog = new CatalogPage(page);
     const cart = new ShoppingCartPage(page);
     const [first, second] = books;
 
-    await page.goto('/');
     await catalog.addToCart(first.title);
     await catalog.addToCart(first.title);
     await catalog.addToCart(second.title);
@@ -133,11 +129,10 @@ test.describe('Shopping Cart — management', () => {
 
   test('CART-06: removing an item deletes only its own row', async ({ page }) => {
     const header = new HeaderPage(page);
-    const catalog = new CatalogPageForCart(page);
+    const catalog = new CatalogPage(page);
     const cart = new ShoppingCartPage(page);
     const [first, second] = books;
 
-    await page.goto('/');
     await catalog.addToCart(first.title);
     await catalog.addToCart(second.title);
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(2);
@@ -152,11 +147,10 @@ test.describe('Shopping Cart — management', () => {
 
   test('CART-07: Clear cart empties everything', async ({ page }) => {
     const header = new HeaderPage(page);
-    const catalog = new CatalogPageForCart(page);
+    const catalog = new CatalogPage(page);
     const cart = new ShoppingCartPage(page);
     const book = books[0];
 
-    await page.goto('/');
     await catalog.addToCart(book.title);
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
 
@@ -168,17 +162,3 @@ test.describe('Shopping Cart — management', () => {
   });
 });
 
-/**
- * Small helper used only by the cart suite: adds a book from its card on the
- * catalog pages. Kept local because nothing else needs it yet.
- * @param {import('@playwright/test').Page} page
- */
-function CatalogPageForCart(page) {
-  return {
-    async addToCart(bookTitle) {
-      await page.goto('/');
-      const card = page.locator('app-book-card').filter({ hasText: bookTitle });
-      await card.getByRole('button', { name: 'Add to Cart' }).click();
-    },
-  };
-}
