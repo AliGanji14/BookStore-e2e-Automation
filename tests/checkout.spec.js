@@ -26,7 +26,7 @@ test.beforeAll(async () => {
     firstName: 'QA',
     lastName: 'Checkout',
     gender: 'Male',
-  }));
+  }), 'checkout-user');
 });
 
 /**
@@ -106,18 +106,6 @@ test.describe('Checkout — purchase', () => {
     );
   });
 
-  /** Tests share the account, hence the cart — start each one from empty. */
-  async function resetCart(page) {
-    const cart = new ShoppingCartPage(page);
-    const header = new HeaderPage(page);
-    await header.openCart();
-    const clearButton = cart.clearCartButton;
-    if (await clearButton.isVisible().catch(() => false)) {
-      await clearButton.click();
-      await expect(cart.emptyMessage).toBeVisible();
-    }
-  }
-
   // The form is only enabled when the cart has items, so input validation
   // (required fields, pincode pattern) lives in this gated group.
   test('CO-04b: required-field validation blocks an empty submission', async ({ page }) => {
@@ -132,7 +120,7 @@ test.describe('Checkout — purchase', () => {
     });
 
     await page.goto('/');
-    await resetCart(page);
+    await new ShoppingCartPage(page).openAndClearIfNotEmpty(new HeaderPage(page));
     const card = page.locator('app-book-card').filter({ hasText: books[0].title });
     await card.getByRole('button', { name: 'Add to Cart' }).click();
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
@@ -154,7 +142,7 @@ test.describe('Checkout — purchase', () => {
     const checkout = new CheckoutPage(page);
 
     await page.goto('/');
-    await resetCart(page);
+    await new ShoppingCartPage(page).openAndClearIfNotEmpty(new HeaderPage(page));
     const card = page.locator('app-book-card').filter({ hasText: books[0].title });
     await card.getByRole('button', { name: 'Add to Cart' }).click();
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
@@ -178,7 +166,7 @@ test.describe('Checkout — purchase', () => {
 
     // Arrange: two of the first book, one of the second (distinctive total).
     await page.goto('/');
-    await resetCart(page);
+    await new ShoppingCartPage(page).openAndClearIfNotEmpty(new HeaderPage(page));
     const firstCard = page.locator('app-book-card').filter({ hasText: first.title });
     const secondCard = page.locator('app-book-card').filter({ hasText: second.title });
     await firstCard.getByRole('button', { name: 'Add to Cart' }).click();
@@ -219,7 +207,7 @@ test.describe('Checkout — purchase', () => {
     // Arrange: a fresh order with a distinctive quantity, so its total is
     // unique among this account's orders.
     await page.goto('/');
-    await resetCart(page);
+    await new ShoppingCartPage(page).openAndClearIfNotEmpty(new HeaderPage(page));
     const card = page.locator('app-book-card').filter({ hasText: book.title });
     await card.getByRole('button', { name: 'Add to Cart' }).click();
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);

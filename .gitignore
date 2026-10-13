@@ -184,3 +184,5 @@ playwright/.cache/
 
 # Local cached test credentials (created by utils/api-helpers.js)
 test-data/.local-user.json
+test-data/.checkout-user.json
+test-data/.edge-user.json

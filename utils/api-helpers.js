@@ -9,7 +9,7 @@ const execFileAsync = promisify(execFile);
 
 const REGISTRATION_ATTEMPTS = 8;
 const RETRY_PAUSE_MS = 15_000;
-const CACHE_FILE = path.join(__dirname, '..', 'test-data', '.local-user.json');
+const DEFAULT_CACHE_NAME = 'local-user';
 
 /**
  * API helpers for test-data setup.
@@ -19,7 +19,7 @@ const CACHE_FILE = path.join(__dirname, '..', 'test-data', '.local-user.json');
  * /api/user, /api/login) only succeeds during intermittent windows and
  * frequently answers 200 without persisting, regardless of HTTP client.
  * Setup therefore verifies every account with a real login round-trip,
- * caches working credentials in test-data/.local-user.json (gitignored),
+ * caches working credentials in test-data/.<cacheName>.json (gitignored),
  * and reuses the same account across runs.
  */
 
@@ -85,16 +85,20 @@ async function requestJson(method, url, body, authToken) {
  *
  * @param {string} baseURL
  * @param {() => { username: string, password: string, firstName: string, lastName: string, gender: string }} userFactory
+ * @param {string} [cacheName] Separate cache per spec, so specs that mutate
+ *   the account's cart or orders never share an account in parallel runs.
  * @returns {Promise<{ username: string, password: string, firstName: string, lastName: string, gender: string }>}
  */
-async function ensureUser(baseURL, userFactory) {
+async function ensureUser(baseURL, userFactory, cacheName = DEFAULT_CACHE_NAME) {
+  const cacheFile = path.join(__dirname, '..', 'test-data', `.${cacheName}.json`);
+
   // 1. Reuse the cached account when it still works. The verification login
   //    is retried — the demo's edge drops requests even when the account is
   //    perfectly fine, and one flaky 401 must not discard a good account.
   for (let check = 0; check < 3; check++) {
-    if (fs.existsSync(CACHE_FILE)) {
+    if (fs.existsSync(cacheFile)) {
       try {
-        const cached = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+        const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
         if ((await loginStatus(baseURL, cached)) === 200) return cached;
       } catch {
         // unreadable cache — create a fresh account below
@@ -108,7 +112,7 @@ async function ensureUser(baseURL, userFactory) {
   for (let attempt = 0; attempt < REGISTRATION_ATTEMPTS; attempt++) {
     await requestStatus('POST', `${baseURL}/api/user`, { ...user, confirmPassword: user.password });
     if ((await loginStatus(baseURL, user)) === 200) {
-      fs.writeFileSync(CACHE_FILE, JSON.stringify(user, null, 2));
+      fs.writeFileSync(cacheFile, JSON.stringify(user, null, 2));
       return user;
     }
     await new Promise((resolve) => setTimeout(resolve, RETRY_PAUSE_MS));

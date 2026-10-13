@@ -28,7 +28,7 @@ test.beforeAll(async () => {
     firstName: 'QA',
     lastName: 'Edge',
     gender: 'Male',
-  }));
+  }), 'edge-user');
 });
 
 // ---------------------------------------------------------------------------
@@ -146,7 +146,6 @@ test.describe('Negative & Edge — catalog data', () => {
     );
   });
 
-
   test('EDGE-SRCH-05: search results are case-insensitive (upper vs lower query)', async ({ page }) => {
     const header = new HeaderPage(page);
     const catalog = new CatalogPage(page);
@@ -170,11 +169,10 @@ test.describe('Negative & Edge — catalog data', () => {
     const cart = new ShoppingCartPage(page);
     const book = books[0];
 
-    await loginAs(page);
+    await new LoginPage(page).loginAs(account.username, account.password);
     await page.goto('/');
-    await resetCart(page);
-    const card = page.locator('app-book-card').filter({ hasText: book.title });
-    await card.getByRole('button', { name: 'Add to Cart' }).click();
+    await cart.openAndClearIfNotEmpty(header);
+    await catalog.addToCart(book.title);
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
 
     await header.openCart();
@@ -207,11 +205,12 @@ test.describe('Negative & Edge — catalog data', () => {
       const cart = new ShoppingCartPage(page);
       const checkout = new CheckoutPage(page);
 
-      await loginAs(page);
+      const catalog = new CatalogPage(page);
+
+      await new LoginPage(page).loginAs(account.username, account.password);
       await page.goto('/');
-      await resetCart(page);
-      const card = page.locator('app-book-card').filter({ hasText: books[0].title });
-      await card.getByRole('button', { name: 'Add to Cart' }).click();
+      await cart.openAndClearIfNotEmpty(header);
+      await catalog.addToCart(books[0].title);
       await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
 
       await header.openCart();
@@ -232,11 +231,12 @@ test.describe('Negative & Edge — catalog data', () => {
     const cart = new ShoppingCartPage(page);
     const checkout = new CheckoutPage(page);
 
-    await loginAs(page);
+    const catalog = new CatalogPage(page);
+
+    await new LoginPage(page).loginAs(account.username, account.password);
     await page.goto('/');
-    await resetCart(page);
-    const card = page.locator('app-book-card').filter({ hasText: books[0].title });
-    await card.getByRole('button', { name: 'Add to Cart' }).click();
+    await cart.openAndClearIfNotEmpty(header);
+    await catalog.addToCart(books[0].title);
     await expect.poll(() => header.cartBadgeCount(), { timeout: 5_000 }).toBe(1);
 
     await header.openCart();
