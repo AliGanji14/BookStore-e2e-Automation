@@ -78,7 +78,7 @@ class HeaderPage {
       .getByRole('option', { name: new RegExp(escaped, 'i') })
       .first();
     try {
-      await suggestion.click({ timeoutMs: 3000 });
+      await suggestion.click({ timeout: 3000 });
     } catch {
       await this.searchInput.press('Enter');
     }

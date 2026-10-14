@@ -26,7 +26,8 @@ class ShoppingCartPage {
   /** Opens the cart and clears it if it has items, so a test starts empty. */
   async openAndClearIfNotEmpty(header) {
     await header.openCart();
-    if (await this.clearCartButton.isVisible().catch(() => false)) {
+    await expect(this.clearCartButton.or(this.emptyMessage)).toBeVisible();
+    if (await this.clearCartButton.isVisible()) {
       await this.clearCartButton.click();
       await expect(this.emptyMessage).toBeVisible();
     }

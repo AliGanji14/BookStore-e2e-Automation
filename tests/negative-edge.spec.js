@@ -42,10 +42,7 @@ test.describe('Negative & Edge — input handling', () => {
     const registration = new RegistrationPage(page);
 
     await registration.goto();
-    await registration.userName.fill(' admin ');
-    // Wait for the async availability check to settle before asserting.
-    await expect(registration.userName).toHaveClass(/ng-pending/);
-    await expect(registration.userName).not.toHaveClass(/ng-pending/);
+    await registration.checkUserName(' admin ');
 
     await expect(registration.userNameNotAvailableError).toBeHidden();
   });

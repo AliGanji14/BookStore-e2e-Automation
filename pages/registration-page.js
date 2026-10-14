@@ -41,18 +41,25 @@ class RegistrationPage {
   async fill(user) {
     await this.firstName.fill(user.firstName);
     await this.lastName.fill(user.lastName);
-    await this.userName.fill(user.username);
-
-    // App behavior: the username field runs an async availability check with a
-    // ~1s debounce (custom-validation.service.ts). While it is pending, the
-    // form status is PENDING and clicking Register silently does nothing.
-    // Wait for the check to start and settle so submit() is deterministic.
-    await expect(this.userName).toHaveClass(/ng-pending/);
-    await expect(this.userName).not.toHaveClass(/ng-pending/);
+    await this.checkUserName(user.username);
 
     await this.password.fill(user.password);
     await this.confirmPassword.fill(user.confirmPassword);
     await (user.gender === 'Female' ? this.femaleRadio : this.maleRadio).check();
+  }
+
+  /**
+   * Types a username and waits for its debounced availability check to finish.
+   * App behavior: the field runs an async check (custom-validation.service.ts)
+   * after a ~1s debounce, and Register does nothing while it is pending. The
+   * response is awaited directly so the check cannot be missed or race.
+   */
+  async checkUserName(username) {
+    const availability = this.page.waitForResponse(
+      (response) => response.url().includes('/api/user/validateUserName/')
+    );
+    await this.userName.fill(username);
+    await availability;
   }
 
   async submit() {
