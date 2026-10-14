@@ -186,3 +186,7 @@ playwright/.cache/
 test-data/.local-user.json
 test-data/.checkout-user.json
 test-data/.edge-user.json
+
+# Scratch space and local run logs
+.tmp/
+*.log
