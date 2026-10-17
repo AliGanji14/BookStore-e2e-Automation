@@ -9,39 +9,45 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     env:
       CI: true
       BASE_URL: https://bookcart.azurewebsites.net
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
 
       - name: Install browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run Playwright tests
-        run: npx playwright test
+        run: npx playwright test --project=${{ matrix.project }}
 
       - name: Upload HTML report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: playwright-report/
           retention-days: 14
+          if-no-files-found: ignore
 
       - name: Upload test artifacts (traces, screenshots, videos)
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.project }}
           path: test-results/
           retention-days: 7
+          if-no-files-found: ignore
