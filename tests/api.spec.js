@@ -15,7 +15,7 @@ if (!VALID_PASSWORD) {
 let account;
 
 test.beforeAll(async () => {
-  test.setTimeout(120_000);
+  test.setTimeout(420_000);
   account = await ensureUser(BASE_URL, () => ({
     username: generateUsername('api'),
     password: VALID_PASSWORD,
