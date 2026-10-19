@@ -21,6 +21,16 @@ class LoginPage {
     await this.password.fill(password);
     await this.submitButton.click();
   }
+
+  /**
+   * Opens /login and signs in, then waits until the app leaves the login page.
+   * Used by specs that only need an authenticated session before continuing.
+   */
+  async loginAs(username, password) {
+    await this.goto();
+    await this.login(username, password);
+    await this.page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 });
+  }
 }
 
 module.exports = { LoginPage };

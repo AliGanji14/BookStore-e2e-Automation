@@ -36,7 +36,17 @@ test.beforeAll(async () => {
  */
 async function loginAs(page) {
   const login = new LoginPage(page);
-  if (!page.url().includes('/login')) await login.goto();
+
+  // The auth guard redirects /checkout -> /login?returnUrl=%2Fcheckout, and the
+  // app only returns to /checkout while that returnUrl survives. Sampling
+  // page.url() once was racy on slower runners: when the guard had not run yet,
+  // the old code navigated to /login itself, dropped returnUrl, and the app
+  // landed on "/" after a successful login — failing CO-02/CO-04/CO-06 in CI
+  // (chromium, webkit) while passing by luck elsewhere.
+  if (!/\/login\?returnUrl=/.test(page.url())) {
+    await page.waitForURL(/\/login\?returnUrl=/, { timeout: 15_000 });
+  }
+
   await login.login(account.username, account.password);
 }
 
