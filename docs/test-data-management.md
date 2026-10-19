@@ -49,8 +49,10 @@ qa_<purpose>_<epoch>_<workerIndex>      e.g.  qa_login_1759512345_3
 
 **Account lifecycle:**
 
-- Login/Cart/Checkout tests get their account from an **API fixture** (`POST /api/User` in a worker-scoped fixture) — the UI registration path is exercised only by REG-01.
-- UI-created data (the REG-01 user) is never reused by other tests — tests never depend on each other's leftovers.
+- `ensureUser()` (`utils/api-helpers.js`) resolves the account in three tiers: `TEST_USER_USERNAME` when set → the per-spec cache in `test-data/.<name>.json` → API registration (`POST /api/User`). Every tier is validated by a real login round-trip, never by the registration response.
+- **CI must set `TEST_USER_USERNAME`** (repository variable or secret) to an existing account, with its password in `TEST_USER_PASSWORD`. Runner checkouts have no cache, and the demo's `POST /api/User` answers 200 **without persisting** the user (verified 2026-10-19), so registration cannot be relied on there.
+- Registration retries are bounded (3 attempts / 60s budget), so a dead write path fails within a minute with an actionable message instead of burning a multi-minute test or hook timeout.
+- The UI registration path is exercised only by REG-01/REG-01b. REG-01b carries `test.fail()` because the backend does not persist new users: it still runs and asserts, and reports an *unexpected pass* (a normal failure) once the product is fixed — the signal to remove the marker.
 
 ---
 

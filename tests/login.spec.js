@@ -13,21 +13,19 @@ if (!VALID_PASSWORD) {
   throw new Error('TEST_USER_PASSWORD is not set — copy .env.example to .env (see docs/test-data-management.md)');
 }
 
-// Creating an API account (with persistence verification) can outlast the
-// default 30s on the flaky public demo — give the whole suite room to breathe.
+// Account setup is bounded inside ensureUser(); 120s is only a ceiling for slow
+// network calls, not a substitute for a backend that cannot create accounts.
 test.setTimeout(120_000);
 
 test.describe('User Login — with an existing account', () => {
-  // One shared, working account per run. The demo's write path only succeeds
-  // in intermittent windows, so the account is created once (and cached on
-  // disk by ensureUser) instead of per test. Login tests don't mutate the
+  // One shared, working account per run: TEST_USER_USERNAME in CI, or the
+  // account cached on disk by ensureUser locally. Login tests don't mutate the
   // account, so sharing it keeps them effectively independent.
   let username;
 
   test.beforeAll(async () => {
-    // Hook timeouts are separate from test timeouts — extend this hook,
-    // it may need several registration attempts on the flaky demo.
-    test.setTimeout(420_000);
+    // Hook timeouts are separate from test timeouts; match the file ceiling.
+    test.setTimeout(120_000);
     const creds = await ensureUser(process.env.BASE_URL, () => ({
       username: generateUsername('login'),
       password: VALID_PASSWORD,

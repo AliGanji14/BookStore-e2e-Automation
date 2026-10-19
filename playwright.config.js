@@ -35,8 +35,10 @@ module.exports = defineConfig({
 
   /* Settings applied to every test's browser context. */
   use: {
-    // Where the application under test lives — every page.goto('/') uses this.
-    baseURL: 'https://bookcart.azurewebsites.net',
+    // Keep this in sync with the top-level baseURL above: hardcoding it here
+    // silently ignored BASE_URL/ENV_FILE, so local runs and CI could target
+    // different applications while process.env.BASE_URL said otherwise.
+    baseURL: process.env.BASE_URL || 'https://bookcart.azurewebsites.net',
 
     // Capture evidence when a test fails.
     screenshot: 'only-on-failure',

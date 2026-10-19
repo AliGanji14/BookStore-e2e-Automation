@@ -7,9 +7,26 @@ const { expect } = require('@playwright/test');
 
 const execFileAsync = promisify(execFile);
 
-const REGISTRATION_ATTEMPTS = 8;
-const RETRY_PAUSE_MS = 15_000;
+// curl's null device is platform-specific; 'NUL' is only a device on Windows
+// and would instead create a file called NUL on the Linux runners.
+const NULL_SINK = process.platform === 'win32' ? 'NUL' : '/dev/null';
+
+// The demo's write path (POST /api/user) frequently answers 200 without
+// persisting the account. Retry only a few times, within a fixed budget, so a
+// broken backend surfaces as one clear error in well under a minute instead of
+// stalling a whole CI job (previously: 8 attempts × 15s against a 120s hook).
+const REGISTRATION_ATTEMPTS = 3;
+const SETUP_BUDGET_MS = 60_000;
+const RETRY_PAUSE_MS = 5_000;
+const CACHE_LOGIN_ATTEMPTS = 3;
+const CONFIGURED_LOGIN_ATTEMPTS = 3;
 const DEFAULT_CACHE_NAME = 'local-user';
+
+// CI runners start with no cached credentials (test-data/.<cacheName>.json is
+// gitignored), so they must not depend on the demo's broken write path. When
+// TEST_USER_USERNAME is set, that existing account is used instead of
+// registering a new one — see docs/test-data-management.md §2.
+const CONFIGURED_USERNAME = process.env.TEST_USER_USERNAME;
 
 /**
  * API helpers for test-data setup.
@@ -47,7 +64,7 @@ async function curl(args) {
  * @returns {Promise<number | null>}
  */
 async function requestStatus(method, url, body) {
-  const args = ['-s', '-m', '30', '-X', method, '-o', 'NUL', '-w', '%{http_code}'];
+  const args = ['-s', '-m', '30', '-X', method, '-o', NULL_SINK, '-w', '%{http_code}'];
   if (body) args.push('-H', 'Content-Type: application/json', '-d', JSON.stringify(body));
   args.push(url);
   const out = await curl(args);
@@ -77,11 +94,34 @@ async function requestJson(method, url, body, authToken) {
   };
 }
 
+/** @param {number} ms */
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Ensures a working test account exists and returns its credentials.
- * - Reuses the cached account when it still logs in.
- * - Otherwise registers a fresh one, retrying across the demo's outage
- *   windows until a real login round-trip succeeds.
+ * Caches credentials for later runs. Best effort: a read-only checkout must not
+ * turn a working account into a failure.
+ * @param {string} cacheFile
+ * @param {{ username: string, password: string }} user
+ */
+function remember(cacheFile, user) {
+  try {
+    fs.writeFileSync(cacheFile, JSON.stringify(user, null, 2));
+  } catch {
+    // Cache is an optimisation, never a requirement.
+  }
+  return user;
+}
+
+/**
+ * Ensures a working test account exists and returns its credentials, in order:
+ * 1. TEST_USER_USERNAME when configured — an existing account (used by CI,
+ *    which has no cache and cannot rely on the demo's broken registration).
+ * 2. The cached account for this spec, when it still logs in.
+ * 3. A freshly registered account, within a bounded retry budget.
+ * Every tier is validated by a real login round-trip, never by the response of
+ * the registration call (the demo answers 200 without persisting the user).
  *
  * @param {string} baseURL
  * @param {() => { username: string, password: string, firstName: string, lastName: string, gender: string }} userFactory
@@ -91,33 +131,58 @@ async function requestJson(method, url, body, authToken) {
  */
 async function ensureUser(baseURL, userFactory, cacheName = DEFAULT_CACHE_NAME) {
   const cacheFile = path.join(__dirname, '..', 'test-data', `.${cacheName}.json`);
+  const password = process.env.TEST_USER_PASSWORD;
 
-  // 1. Reuse the cached account when it still works. The verification login
-  //    is retried — the demo's edge drops requests even when the account is
-  //    perfectly fine, and one flaky 401 must not discard a good account.
-  for (let check = 0; check < 3; check++) {
-    if (fs.existsSync(cacheFile)) {
-      try {
-        const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+  // 1. An explicitly configured account wins: CI supplies a pre-existing one
+  //    because POST /api/user does not persist new users there. A configured
+  //    account that cannot log in is a configuration error — say so instead of
+  //    silently falling back to a registration path that is known to be broken.
+  if (CONFIGURED_USERNAME) {
+    const configured = { username: CONFIGURED_USERNAME, password };
+    for (let attempt = 1; attempt <= CONFIGURED_LOGIN_ATTEMPTS; attempt++) {
+      if ((await loginStatus(baseURL, configured)) === 200) return remember(cacheFile, configured);
+      if (attempt < CONFIGURED_LOGIN_ATTEMPTS) await sleep(RETRY_PAUSE_MS);
+    }
+    throw new Error(
+      `Configured test account "${CONFIGURED_USERNAME}" (TEST_USER_USERNAME) cannot log in ` +
+        `with TEST_USER_PASSWORD after ${CONFIGURED_LOGIN_ATTEMPTS} attempts. ` +
+        'Fix the account/secret, or unset TEST_USER_USERNAME to fall back to API registration.'
+    );
+  }
+
+  // 2. Reuse the cached account when it still works. The verification login is
+  //    retried — the demo's edge drops requests even when the account is fine,
+  //    and one flaky 401 must not discard a good account.
+  if (fs.existsSync(cacheFile)) {
+    try {
+      const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      for (let attempt = 1; attempt <= CACHE_LOGIN_ATTEMPTS; attempt++) {
         if ((await loginStatus(baseURL, cached)) === 200) return cached;
-      } catch {
-        // unreadable cache — create a fresh account below
+        if (attempt < CACHE_LOGIN_ATTEMPTS) await sleep(3_000);
       }
+    } catch {
+      // unreadable cache — create a fresh account below
     }
-    await new Promise((resolve) => setTimeout(resolve, 3_000));
   }
 
-  // 2. Register a fresh account; only trust a successful login round-trip.
+  // 3. Register a fresh account, bounded in both attempts and wall clock. Only
+  //    a real login round-trip counts as success: the demo answers 200 on
+  //    POST /api/user without persisting the user, so the response proves nothing.
+  const startedAt = Date.now();
   const user = userFactory();
-  for (let attempt = 0; attempt < REGISTRATION_ATTEMPTS; attempt++) {
-    await requestStatus('POST', `${baseURL}/api/user`, { ...user, confirmPassword: user.password });
-    if ((await loginStatus(baseURL, user)) === 200) {
-      fs.writeFileSync(cacheFile, JSON.stringify(user, null, 2));
-      return user;
-    }
-    await new Promise((resolve) => setTimeout(resolve, RETRY_PAUSE_MS));
+  let lastStatus = null;
+  for (let attempt = 1; attempt <= REGISTRATION_ATTEMPTS; attempt++) {
+    if (Date.now() - startedAt > SETUP_BUDGET_MS) break;
+    lastStatus = await requestStatus('POST', `${baseURL}/api/user`, { ...user, confirmPassword: user.password });
+    if ((await loginStatus(baseURL, user)) === 200) return remember(cacheFile, user);
+    if (attempt < REGISTRATION_ATTEMPTS) await sleep(RETRY_PAUSE_MS);
   }
-  throw new Error(`Test account creation failed after ${REGISTRATION_ATTEMPTS} attempts (demo write path down?)`);
+  throw new Error(
+    `Test account creation failed after ${REGISTRATION_ATTEMPTS} attempts ` +
+      `(last POST /api/user -> ${lastStatus}, then login != 200). ` +
+      "The demo's registration write path is not persisting users; " +
+      'set TEST_USER_USERNAME to an existing account (see docs/test-data-management.md §2).'
+  );
 }
 
 /**

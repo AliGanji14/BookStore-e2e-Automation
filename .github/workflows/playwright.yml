@@ -14,6 +14,11 @@ jobs:
       CI: true
       BASE_URL: https://bookcart.azurewebsites.net
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      # CI has no cached credentials (test-data/.<name>.json is gitignored) and the
+      # demo's POST /api/user answers 200 without persisting new users, so the run
+      # must reuse an existing account. Set a repository variable or secret named
+      # TEST_USER_USERNAME to that account's username.
+      TEST_USER_USERNAME: ${{ vars.TEST_USER_USERNAME || secrets.TEST_USER_USERNAME }}
     strategy:
       fail-fast: false
       matrix:

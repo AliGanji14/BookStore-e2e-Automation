@@ -15,7 +15,10 @@ if (!VALID_PASSWORD) {
 let account;
 
 test.beforeAll(async () => {
-  test.setTimeout(420_000);
+  // Ceiling for account setup. ensureUser() bounds its own retries and budget,
+  // so this only covers slow network calls — it is not a workaround for a
+  // backend that fails to create accounts.
+  test.setTimeout(120_000);
   account = await ensureUser(BASE_URL, () => ({
     username: generateUsername('api'),
     password: VALID_PASSWORD,

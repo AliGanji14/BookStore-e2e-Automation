@@ -19,7 +19,8 @@ if (!VALID_PASSWORD) {
 let account;
 
 test.beforeAll(async () => {
-  test.setTimeout(180_000);
+  // Ceiling for account setup; ensureUser() bounds its own retries.
+  test.setTimeout(120_000);
   account = await ensureUser(BASE_URL, () => ({
     username: generateUsername('co'),
     password: VALID_PASSWORD,

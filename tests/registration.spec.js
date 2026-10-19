@@ -30,16 +30,21 @@ test.describe('User Registration', () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  // KNOWN BUG (verified 2026-10-03): the app posts the registration to
-  // `/api/user/` (trailing slash). The backend answers 200 but never persists
-  // the account — validateUserName still reports the name as available and the
-  // subsequent login returns 401. Registering against `/api/user` (no slash)
-  // works. This test is expected to fail until the product fixes the route.
+  // KNOWN BUG (verified 2026-10-03, re-verified 2026-10-19): the backend
+  // answers 200 on registration but never persists the account — a direct
+  // GET /api/user/validateUserName/<new user> still reports the name as
+  // available and the follow-up login returns 401. Posting straight to
+  // /api/user (no trailing slash, what utils/api-helpers.js uses) fails the
+  // same way, so this is a backend write-path defect, not a routing typo.
+  // test.fail() keeps the test running and asserting: the documented bug is
+  // reported as an expected failure, and it becomes an ordinary failure
+  // ("unexpected pass") once the product is fixed — the signal to drop it.
   test('REG-01b: an account created via the UI can log in', async ({ page }) => {
+    test.fail(true, 'Known backend bug: POST /api/user returns 200 without persisting the account.');
     test.info().annotations.push({
       type: 'known-bug',
       description:
-        'App posts registration to /api/user/ (trailing slash); backend returns 200 without persisting the user, so the follow-up login fails with 401.',
+        'POST /api/user (with or without trailing slash) returns 200 without persisting the user, so the follow-up login fails with 401.',
     });
     const registration = new RegistrationPage(page);
     const login = new LoginPage(page);
